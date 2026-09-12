@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+  <title>Aether — Weather & Climate Analytics</title>
+  <meta name="description" content="High-precision real-time weather and climate analytics platform for desktop monitoring.">
+  <meta name="theme-color" content="#07090e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Aether">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- MapLibre GL CSS for Map (dark, no watermark) -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  
+  <!-- Main Application CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Anti-flash: restore saved appearance before first paint -->
+  <script>
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('aether_storage') || '{}');
+        var r = document.documentElement;
+        r.classList.remove('theme-dark', 'theme-light');
+        r.classList.add(s.theme === 'light' ? 'theme-light' : 'theme-dark');
+      } catch (_) {
+        document.documentElement.classList.add('theme-dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Navigation Bar -->
+    <header class="top-navbar">
+      <div class="nav-brand" id="brandLogo">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">AETHER <span class="brand-tag">Analytics</span></div>
+        </div>
+      </div>
+
+      <!-- City Search with Typeahead -->
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input type="text" id="citySearchInput" class="search-input" placeholder="Search any city or coordinates worldwide (e.g. Tokyo, Zurich)..." autocomplete="off">
+          <button id="searchClearBtn" class="search-clear-btn" title="Clear search">✕</button>
+        </div>
+        <div id="searchDropdown" class="search-dropdown"></div>
+      </div>
+
+      <!-- Controls & Live Indicator -->
+      <div class="nav-controls">
+        <div class="unit-toggle" id="unitToggle">
+          <button class="unit-btn active" data-unit="metric">°C Metric</button>
+          <button class="unit-btn" data-unit="imperial">°F Imperial</button>
+        </div>
+
+        <button id="refreshBtn" class="action-btn" title="Synchronize telemetry data">
+          <svg id="refreshIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 21h5v-5"/>
+          </svg>
+          <span>Sync</span>
+        </button>
+
+        <div class="telemetry-status">
+          <div class="telemetry-dot"></div>
+          <span>LIVE TELEMETRY</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quick Location Chips -->
+    <section class="quick-cities-bar" id="quickCitiesBar">
+      <span class="quick-label">Stations:</span>
+      <button class="city-chip active" data-lat="51.5074" data-lon="-0.1278" data-name="London" data-country="United Kingdom">London</button>
+      <button class="city-chip" data-lat="40.7128" data-lon="-74.0060" data-name="New York" data-country="United States">New York</button>
+      <button class="city-chip" data-lat="35.6762" data-lon="139.6503" data-name="Tokyo" data-country="Japan">Tokyo</button>
+      <button class="city-chip" data-lat="-33.8688" data-lon="151.2093" data-name="Sydney" data-country="Australia">Sydney</button>
+      <button class="city-chip" data-lat="1.3521" data-lon="103.8198" data-name="Singapore" data-country="Singapore">Singapore</button>
+      <button class="city-chip" data-lat="47.3769" data-lon="8.5417" data-name="Zurich" data-country="Switzerland">Zurich</button>
+      <button class="city-chip" data-lat="64.1466" data-lon="-21.9426" data-name="Reykjavik" data-country="Iceland">Reykjavik</button>
+      <button class="city-chip" data-lat="-23.5505" data-lon="-46.6333" data-name="São Paulo" data-country="Brazil">São Paulo</button>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="view-tabs" id="viewTabs">
+      <button class="view-tab active" data-view="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="7" height="9" x="3" y="3" rx="1"/>
+          <rect width="7" height="5" x="14" y="3" rx="1"/>
+          <rect width="7" height="9" x="14" y="12" rx="1"/>
+          <rect width="7" height="5" x="3" y="16" rx="1"/>
+        </svg>
+        Overview
+      </button>
+
+      <button class="view-tab" data-view="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 3v18h18"/>
+          <path d="m19 9-5 5-4-4-3 3"/>
+        </svg>
+        Climate & Analytics
+      </button>
+
+      <button class="view-tab" data-view="airquality">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
+          <path d="M12 12 2.5 7.5"/>
+        </svg>
+        Air Quality & Atmosphere
+      </button>
+
+      <button class="view-tab" data-view="map">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+          <line x1="9" x2="9" y1="3" y2="18"/>
+          <line x1="15" x2="15" y1="6" y2="21"/>
+        </svg>
+        Interactive World Map
+      </button>
+
+      <button class="view-tab" data-view="forecast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+          <line x1="16" x2="16" y1="2" y2="6"/>
+          <line x1="8" x2="8" y1="2" y2="6"/>
+          <line x1="3" x2="21" y1="10" y2="10"/>
+        </svg>
+        14-Day Trends
+      </button>
+
+      <button class="view-tab" data-view="comparisons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" x2="12" y1="3" y2="21"/>
+          <polyline points="8 7 4 11 8 15"/>
+          <polyline points="16 7 20 11 16 15"/>
+        </svg>
+        City Comparisons
+      </button>
+
+      <button class="view-tab" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+        </svg>
+        Settings
+      </button>
+    </nav>
+
+    <!-- Hero Telemetry Strip -->
+    <section class="hero-strip" id="heroStrip">
+      <div class="hero-location">
+        <div class="hero-location-header">
+          <h1 class="hero-city-name" id="heroCityName">London</h1>
+          <span class="hero-country-pill" id="heroCountryName">United Kingdom</span>
+        </div>
+        <div class="hero-time-coords">
+          <span id="heroLocalTime">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span id="heroClockText">--:-- --</span>
+          </span>
+          <span id="heroCoordinates">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span id="heroCoordsText">51.51° N, 0.13° W</span>
+          </span>
+          <span id="heroElevation">Elevation: <b id="heroElevationVal">35m</b></span>
+        </div>
+      </div>
+
+      <div class="hero-temp-block">
+        <div class="hero-weather-icon-wrap" id="heroWeatherIcon">
+          <!-- Injected SVG -->
+        </div>
+        <div class="hero-temp-details">
+          <div class="hero-temp-main">
+            <span id="heroCurrentTemp" class="tabular-nums">--</span>
+            <span class="hero-temp-unit" id="heroTempUnit">°C</span>
+          </div>
+          <div class="hero-weather-condition" id="heroConditionText">Loading conditions...</div>
+          <div class="hero-temp-sub">
+            <span>Feels like: <b id="heroApparentTemp" class="tabular-nums">--°</b></span>
+            <span>•</span>
+            <span>H: <b id="heroTodayHigh" class="tabular-nums">--°</b> L: <b id="heroTodayLow" class="tabular-nums">--°</b></span>
+            <span>•</span>
+            <span>Comfort: <b id="heroComfortText">Comfortable</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-stats-pills">
+        <div class="stat-badge">
+          <div class="stat-badge-title">Air Quality</div>
+          <div class="stat-badge-value tabular-nums" id="heroAqiVal">--</div>
+          <div class="stat-badge-sub" id="heroAqiStatus">Evaluating</div>
+        </div>
+        <div class="stat-badge">
+          <div class="stat-badge-title">Precipitation</div>
+          <div class="stat-badge-value tabular-nums" id="heroPrecipProb">0%</div>
+          <div class="stat-badge-sub" id="heroPrecipSum">0.0 mm / 24h</div>
+        </div>
+        <div class="stat-badge">
+          <div class="stat-badge-title">UV Index</div>
+          <div class="stat-badge-value tabular-nums" id="heroUvIndex">--</div>
+          <div class="stat-badge-sub" id="heroUvRisk">Moderate</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================================
+         VIEW 1: OVERVIEW
+         ============================================================= -->
+    <main class="dashboard-view active" id="view-overview">
+      <!-- 6 Metrics Cards Grid -->
+      <div class="metrics-grid-6">
+        <!-- Card 1: Temp & Dew Point -->
+        <div class="card" data-prism-index="0">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+              </svg>
+              <div>
+                <div class="card-title">Temperature & Dew Point</div>
+                <div class="card-subtitle">Ambient & condensation index</div>
+              </div>
+            </div>
+            <span class="card-badge emerald" id="cardDewPointStatus">Optimal</span>
+          </div>
+          <div class="metric-card-content">
+            <div class="metric-primary-val tabular-nums" id="cardTempDewVal">
+              --<span class="metric-unit" id="cardDewUnit">°C</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="cardTempProgress" style="width: 50%;"></div>
+              </div>
+              <div class="progress-labels">
+                <span>Dew Point: <b id="cardDewPointVal">--°</b></span>
+                <span>Spread: <b id="cardDewSpreadVal">--°</b></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Wind & Direction -->
+        <div class="card" data-prism-index="1">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.7 7.7A7.5 7.5 0 0 0 5 12h14"/>
+                <path d="M12.6 19.4A7.5 7.5 0 0 0 21 15H3"/>
+              </svg>
+              <div>
+                <div class="card-title">Wind & Dynamics</div>
+                <div class="card-subtitle">Velocity & direction vector</div>
+              </div>
+            </div>
+            <span class="card-badge" id="cardWindBeaufort">Light Breeze</span>
+          </div>
+          <div class="metric-card-content">
+            <div class="compass-wrapper">
+              <div class="compass-dial">
+                <div class="compass-needle" id="compassNeedle"></div>
+              </div>
+              <div>
+                <div class="metric-primary-val tabular-nums" id="cardWindSpeedVal">
+                  --<span class="metric-unit" id="cardWindUnit">km/h</span>
+                </div>
+                <div class="metric-meta-row" style="gap: 12px; margin-top: 4px;">
+                  <span>Direction: <b id="cardWindDirectionText">--</b></span>
+                  <span>Gusts: <b id="cardWindGustVal">--</b></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Moisture & Humidity -->
+        <div class="card" data-prism-index="2">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+              </svg>
+              <div>
+                <div class="card-title">Relative Humidity</div>
+                <div class="card-subtitle">Atmospheric vapor saturation</div>
+              </div>
+            </div>
+            <span class="card-badge" id="cardHumidityStatus">Normal</span>
+          </div>
+          <div class="metric-card-content">
+            <div class="metric-primary-val tabular-nums" id="cardHumidityVal">
+              --<span class="metric-unit">%</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill sky" id="cardHumidityProgress" style="width: 55%;"></div>
+              </div>
+              <div class="progress-labels">
+                <span>Comfort Zone: 35-65%</span>
+                <span id="cardVaporPressure">Vapor: -- hPa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Atmospheric Pressure -->
+        <div class="card" data-prism-index="3">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="m16 12-4-4-4 4"/>
+                <path d="M12 16V8"/>
+              </svg>
+              <div>
+                <div class="card-title">Barometric Pressure</div>
+                <div class="card-subtitle">Surface & MSL altimeter</div>
+              </div>
+            </div>
+            <span class="card-badge emerald" id="cardPressureTendency">Steady</span>
+          </div>
+          <div class="metric-card-content">
+            <div class="metric-primary-val tabular-nums" id="cardPressureVal">
+              --<span class="metric-unit">hPa</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="cardPressureProgress" style="width: 60%;"></div>
+              </div>
+              <div class="progress-labels">
+                <span>Sea Level: <b id="cardPressureMsl">-- hPa</b></span>
+                <span>Standard: 1013 hPa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5: Solar & UV Radiation -->
+        <div class="card" data-prism-index="4">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+              </svg>
+              <div>
+                <div class="card-title">UV Index & Exposure</div>
+                <div class="card-subtitle">Solar erythemal irradiance</div>
+              </div>
+            </div>
+            <span class="card-badge" id="cardUvLevelPill">Low Risk</span>
+          </div>
+          <div class="metric-card-content">
+            <div class="metric-primary-val tabular-nums" id="cardUvMainVal">
+              --<span class="metric-unit">/ 11+</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill amber" id="cardUvProgress" style="width: 25%;"></div>
+              </div>
+              <div class="progress-labels">
+                <span>Peak Index: <b id="cardUvMaxVal">--</b></span>
+                <span id="cardSunProtectionText">Protection not required</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 6: Visibility & Cloud Cover -->
+        <div class="card" data-prism-index="5">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <div>
+                <div class="card-title">Visibility & Clouds</div>
+                <div class="card-subtitle">Optical range & sky cover</div>
+              </div>
+            </div>
+            <span class="card-badge emerald" id="cardVisibilityStatus">Clear Horizon</span>
+          </div>
+          <div class="metric-card-content">
+            <div class="metric-primary-val tabular-nums" id="cardVisibilityVal">
+              --<span class="metric-unit">km</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="cardCloudCoverProgress" style="width: 20%;"></div>
+              </div>
+              <div class="progress-labels">
+                <span>Cloud Cover: <b id="cardCloudCoverVal">--%</b></span>
+                <span id="cardCeilingVal">Ceiling: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 24-Hour Continuous Hourly Chart -->
+      <section class="card chart-card" data-prism-index="2">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <div>
+              <div class="card-title">24-Hour Synoptic Hourly Telemetry</div>
+              <div class="card-subtitle">Continuous meteorological trace with interactive scrubber</div>
+            </div>
+          </div>
+          <div class="chart-controls">
+            <button class="chart-chip-btn active" data-chart-layer="temp">Temperature</button>
+            <button class="chart-chip-btn" data-chart-layer="precip">Precipitation %</button>
+            <button class="chart-chip-btn" data-chart-layer="wind">Wind Velocity</button>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="hourlyChartCanvas" class="chart-canvas"></canvas>
+          <div id="chartTooltip" class="chart-tooltip"></div>
+        </div>
+      </section>
+
+      <!-- Radar Chart + Gauge + Waffle Grid Row -->
+      <div class="viz-grid-2">
+        <!-- Weather Profile Radar -->
+        <section class="card chart-card" data-prism-index="0">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                <polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+              </svg>
+              <div>
+                <div class="card-title">Multi-Parameter Weather Profile</div>
+                <div class="card-subtitle">Normalized 48-hour meteorological balance</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper" style="height: 280px;">
+            <canvas id="radarChartCanvas" class="chart-canvas"></canvas>
+          </div>
+        </section>
+
+        <!-- Comfort Gauge -->
+        <section class="card chart-card" data-prism-index="1">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
+                <path d="M12 12 2.5 7.5"/>
+              </svg>
+              <div>
+                <div class="card-title">Thermal Comfort Index</div>
+                <div class="card-subtitle">Combined temperature, humidity &amp; wind chill</div>
+              </div>
+            </div>
+          </div>
+          <div class="gauge-wrapper">
+            <svg class="gauge-svg" viewBox="0 0 200 120" id="comfortGaugeSvg">
+              <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" />
+              <path class="gauge-val" id="comfortGaugeFill" d="M 20 100 A 80 80 0 0 1 180 100" stroke-dasharray="0 251.2" />
+            </svg>
+            <div style="text-align: center; margin-top: -50px;">
+              <div class="gauge-center-text tabular-nums" id="comfortGaugeValue">--</div>
+              <div class="gauge-sub-text" id="comfortGaugeLabel">Comfortable</div>
+            </div>
+            <div class="gauge-label-row" style="margin-top: 24px;">
+              <span>Chilly</span>
+              <span>Optimal</span>
+              <span>Scorching</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Waffle Chart + Pie Chart Row -->
+      <div class="viz-grid-2">
+        <!-- Waffle Chart -->
+        <section class="card chart-card" data-prism-index="2">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+              </svg>
+              <div>
+                <div class="card-title">Precipitation Likelihood</div>
+                <div class="card-subtitle">100-cell probability grid (next 12 hours)</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0;">
+            <div class="waffle-grid" id="precipWaffleGrid"></div>
+            <div class="legend-row">
+              <span><span class="legend-dot" style="background:var(--accent-primary);"></span>Rain Expected</span>
+              <span><span class="legend-dot" style="background:var(--track-fill);"></span>Dry</span>
+              <span style="font-weight:600;color:var(--text-main);">Probability: <span id="wafflePrecipPct" class="tabular-nums">--%</span></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pie Chart -->
+        <section class="card chart-card" data-prism-index="3">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+              </svg>
+              <div>
+                <div class="card-title">Sky Condition Composition</div>
+                <div class="card-subtitle">48-hour sky condition breakdown</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:24px;padding:8px 0;">
+            <svg viewBox="0 0 100 100" style="width:160px;height:160px;flex-shrink:0;" id="pieChartSvg">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--track-fill)" stroke-width="18"/>
+              <g id="pieSlicesGroup"></g>
+            </svg>
+            <div class="pie-legend" id="pieLegend"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 7-Day Forecast Cards -->
+      <section class="card" data-prism-index="3">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+            <div>
+              <div class="card-title">7-Day Synoptic Outlook</div>
+              <div class="card-subtitle">Diurnal temperature intervals & precipitation probability</div>
+            </div>
+          </div>
+        </div>
+        <div class="forecast-days-grid" id="forecast7DaysGrid">
+          <!-- Dynamically populated 7 forecast cards -->
+        </div>
+      </section>
+
+      <!-- Sun & Solar Cycle Track -->
+      <section class="sun-cycle-container">
+        <div class="sun-event">
+          <div class="sun-event-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;">
+              <path d="M12 2v6"/>
+              <path d="m4.93 10.93 4.24-4.24"/>
+              <path d="m19.07 10.93-4.24-4.24"/>
+              <path d="M2 18h20"/>
+            </svg>
+          </div>
+          <div class="sun-event-info">
+            <div class="sun-event-title">Sunrise</div>
+            <div class="sun-event-time tabular-nums" id="sunSunriseTime">06:20 AM</div>
+          </div>
+        </div>
+
+        <div class="sun-track-wrapper">
+          <div class="sun-duration-text">
+            <span>Daylight: <b id="sunDaylightDuration">--h --m</b></span>
+            <span id="sunCurrentPhase">Solar Trajectory</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill amber" id="sunDayProgress" style="width: 60%;"></div>
+          </div>
+        </div>
+
+        <div class="sun-event">
+          <div class="sun-event-info" style="text-align: right;">
+            <div class="sun-event-title">Sunset</div>
+            <div class="sun-event-time tabular-nums" id="sunSunsetTime">07:45 PM</div>
+          </div>
+          <div class="sun-event-icon" style="color: #f97316;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;">
+              <path d="M12 10V4"/>
+              <path d="m4.93 6.93 4.24 4.24"/>
+              <path d="m19.07 6.93-4.24 4.24"/>
+              <path d="M2 18h20"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =============================================================
+         VIEW 2: CLIMATE & ANALYTICS
+         ============================================================= -->
+    <main class="dashboard-view" id="view-analytics">
+      <div class="analytics-grid-top">
+        <!-- 48-Hour Multi-Metric Deep Trend -->
+        <div class="card chart-card" data-prism-index="6">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18"/>
+                <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+              </svg>
+              <div>
+                <div class="card-title">48-Hour Multi-Parameter Climate Trace</div>
+                <div class="card-subtitle">Dry-bulb temperature vs apparent temperature vs dew point profile</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper" style="height: 280px;">
+            <canvas id="multiMetricCanvas" class="chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Weather Distribution Donut -->
+        <div class="card" data-prism-index="4">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a10 10 0 0 1 10 10h-10z"/>
+              </svg>
+              <div>
+                <div class="card-title">48-Hour Weather Distribution</div>
+                <div class="card-subtitle">Sky condition time ratio</div>
+              </div>
+            </div>
+          </div>
+          <div class="donut-chart-wrapper">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <circle class="donut-segment" id="donutClear" cx="50" cy="50" r="38" stroke="#10b981" stroke-dasharray="60 100" stroke-dashoffset="0"></circle>
+              <circle class="donut-segment" id="donutClouds" cx="50" cy="50" r="38" stroke="#38bdf8" stroke-dasharray="25 100" stroke-dashoffset="-60"></circle>
+              <circle class="donut-segment" id="donutRain" cx="50" cy="50" r="38" stroke="#f59e0b" stroke-dasharray="15 100" stroke-dashoffset="-85"></circle>
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#10b981;"></div>
+                <span>Clear / Fair: <b id="legendClearPct">--%</b></span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#38bdf8;"></div>
+                <span>Cloud Cover: <b id="legendCloudPct">--%</b></span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background:#f59e0b;"></div>
+                <span>Precipitation: <b id="legendRainPct">--%</b></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wind Rose + Precipitation + Pressure Trend Row -->
+      <div class="analytics-grid-mid">
+        <div class="card chart-card" data-prism-index="7">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 12l4.5-4.5"/>
+                <path d="M12 12V2"/>
+              </svg>
+              <div>
+                <div class="card-title">48-Hour Wind Rose</div>
+                <div class="card-subtitle">Prevailing direction & velocity frequency</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper" style="height: 280px;">
+            <canvas id="windRoseCanvas" class="chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card" data-prism-index="0">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+              </svg>
+              <div>
+                <div class="card-title">24-Hour Precipitation Flux</div>
+                <div class="card-subtitle">Hourly liquid-equivalent accumulation</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper" style="height: 280px;">
+            <canvas id="precipBarsCanvas" class="chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card" data-prism-index="1">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="m16 12-4-4-4 4"/>
+                <path d="M12 16V8"/>
+              </svg>
+              <div>
+                <div class="card-title">48-Hour Barometric Trajectory</div>
+                <div class="card-subtitle">Mean sea-level pressure evolution</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper" style="height: 280px;">
+            <canvas id="pressureTrendCanvas" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Climate Stats Row -->
+      <div class="climate-stats-row">
+        <div class="card">
+          <div class="card-title-group">
+            <div class="card-title">Diurnal Thermal Swing</div>
+          </div>
+          <div class="metric-primary-val tabular-nums" style="margin-top:8px;" id="statDiurnalSwing">
+            --<span class="metric-unit">°C</span>
+          </div>
+          <div class="metric-meta-row" style="margin-top:4px;">
+            <span>Max 24h variation</span>
+            <span id="statDiurnalGrade">Normal</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-group">
+            <div class="card-title">Accumulated Moisture</div>
+          </div>
+          <div class="metric-primary-val tabular-nums" style="margin-top:8px;" id="statMoistureAcc">
+            --<span class="metric-unit">mm</span>
+          </div>
+          <div class="metric-meta-row" style="margin-top:4px;">
+            <span>7-day projected total</span>
+            <span id="statMoistureGrade">Light</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-group">
+            <div class="card-title">Atmospheric Stability</div>
+          </div>
+          <div class="metric-primary-val tabular-nums" style="margin-top:8px;" id="statAtmosphericStability">
+            High
+          </div>
+          <div class="metric-meta-row" style="margin-top:4px;">
+            <span>Barometric variance</span>
+            <span>&plusmn; 2.1 hPa</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-group">
+            <div class="card-title">Solar Radiation Flux</div>
+          </div>
+          <div class="metric-primary-val tabular-nums" style="margin-top:8px;" id="statSolarRadiation">
+            --<span class="metric-unit">MJ/m²</span>
+          </div>
+          <div class="metric-meta-row" style="margin-top:4px;">
+            <span>Daily integrated flux</span>
+            <span id="statSolarTier">Moderate</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- =============================================================
+         VIEW 3: AIR QUALITY & ATMOSPHERE
+         ============================================================= -->
+    <main class="dashboard-view" id="view-airquality">
+      <!-- Main AQI Showcase Card -->
+      <section class="card aqi-main-card">
+        <div class="aqi-gauge-block">
+          <div class="aqi-circle-wrap">
+            <svg class="aqi-circle-svg" viewBox="0 0 100 100">
+              <circle class="aqi-circle-bg" cx="50" cy="50" r="40" />
+              <circle class="aqi-circle-val" id="aqiCircleGauge" cx="50" cy="50" r="40" stroke-dasharray="251.2" stroke-dashoffset="180" />
+            </svg>
+            <div class="aqi-circle-center">
+              <span class="aqi-number tabular-nums" id="aqiMainNumber">--</span>
+              <span class="aqi-label-us">US AQI</span>
+            </div>
+          </div>
+          <div class="aqi-status-pill" id="aqiMainBadge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+            Good Air Quality
+          </div>
+        </div>
+
+        <div class="aqi-info-block">
+          <h2 class="aqi-headline" id="aqiHeadlineText">Atmospheric Quality is Clean and Optimal</h2>
+          <p class="aqi-description" id="aqiDescText">
+            Air quality is considered satisfactory, and air pollution poses little or no risk. Both ambient particulate matter and gaseous emissions are well within international World Health Organization (WHO) safety guidelines.
+          </p>
+          <div class="metric-meta-row" style="max-width: 480px; padding-top: 8px; border-top: 1px solid var(--border-subtle);">
+            <span>European Standard: <b id="aqiEuropeanIndex">-- EAQI</b></span>
+            <span>Dominant Pollutant: <b id="aqiDominantPollutant">PM2.5</b></span>
+            <span>Sensor Source: <b>Open-Meteo CAMS / Copernicus</b></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 Pollutant Metric Cards Grid -->
+      <section class="pollutants-grid">
+        <!-- PM2.5 -->
+        <div class="pollutant-card">
+          <div class="pollutant-header">
+            <span class="pollutant-name">PM2.5 (Fine Particles)</span>
+            <span class="card-badge emerald" id="pm25Badge">Good</span>
+          </div>
+          <div class="pollutant-conc tabular-nums" id="pm25Val">-- <span class="pollutant-unit">µg/m³</span></div>
+          <div class="progress-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="pm25Progress" style="width: 20%;"></div>
+            </div>
+            <div class="who-benchmark-row">
+              <span>WHO Standard: 15 µg/m³</span>
+              <span id="pm25Ratio">--% of limit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PM10 -->
+        <div class="pollutant-card">
+          <div class="pollutant-header">
+            <span class="pollutant-name">PM10 (Coarse Particles)</span>
+            <span class="card-badge emerald" id="pm10Badge">Good</span>
+          </div>
+          <div class="pollutant-conc tabular-nums" id="pm10Val">-- <span class="pollutant-unit">µg/m³</span></div>
+          <div class="progress-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="pm10Progress" style="width: 25%;"></div>
+            </div>
+            <div class="who-benchmark-row">
+              <span>WHO Standard: 45 µg/m³</span>
+              <span id="pm10Ratio">--% of limit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ozone (O3) -->
+        <div class="pollutant-card">
+          <div class="pollutant-header">
+            <span class="pollutant-name">Ozone (O₃)</span>
+            <span class="card-badge emerald" id="o3Badge">Good</span>
+          </div>
+          <div class="pollutant-conc tabular-nums" id="o3Val">-- <span class="pollutant-unit">µg/m³</span></div>
+          <div class="progress-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill sky" id="o3Progress" style="width: 30%;"></div>
+            </div>
+            <div class="who-benchmark-row">
+              <span>WHO Standard: 100 µg/m³</span>
+              <span id="o3Ratio">--% of limit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nitrogen Dioxide (NO2) -->
+        <div class="pollutant-card">
+          <div class="pollutant-header">
+            <span class="pollutant-name">Nitrogen Dioxide (NO₂)</span>
+            <span class="card-badge emerald" id="no2Badge">Good</span>
+          </div>
+          <div class="pollutant-conc tabular-nums" id="no2Val">-- <span class="pollutant-unit">µg/m³</span></div>
+          <div class="progress-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="no2Progress" style="width: 15%;"></div>
+            </div>
+            <div class="who-benchmark-row">
+              <span>WHO Standard: 25 µg/m³</span>
+              <span id="no2Ratio">--% of limit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sulphur Dioxide (SO2) -->
+        <div class="pollutant-card">
+          <div class="pollutant-header">
+            <span class="pollutant-name">Sulphur Dioxide (SO₂)</span>
+            <span class="card-badge emerald" id="so2Badge">Good</span>
+          </div>
+          <div class="pollutant-conc tabular-nums" id="so2Val">-- <span class="pollutant-unit">µg/m³</span></div>
+          <div class="progress-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="so2Progress" style="width: 10%;"></div>
+            </div>
+            <div class="who-benchmark-row">
+              <span>WHO Standard: 40 µg/m³</span>
+              <span id="so2Ratio">--% of limit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carbon Monoxide (CO) -->
+        <div class="pollutant-card">
+          <div class="pollutant-header">
+            <span class="pollutant-name">Carbon Monoxide (CO)</span>
+            <span class="card-badge emerald" id="coBadge">Good</span>
+          </div>
+          <div class="pollutant-conc tabular-nums" id="coVal">-- <span class="pollutant-unit">µg/m³</span></div>
+          <div class="progress-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="coProgress" style="width: 8%;"></div>
+            </div>
+            <div class="who-benchmark-row">
+              <span>WHO Standard: 4000 µg/m³</span>
+              <span id="coRatio">--% of limit</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 48-Hour Pollutant Stacked Composition -->
+      <section class="card chart-card" data-prism-index="5">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <rect x="7" y="10" width="3" height="8" rx="0.5"/>
+              <rect x="12" y="6" width="3" height="12" rx="0.5"/>
+              <rect x="17" y="13" width="3" height="5" rx="0.5"/>
+            </svg>
+            <div>
+              <div class="card-title">48-Hour Pollutant Stacked Composition</div>
+              <div class="card-subtitle">Relative particulate vs. gaseous concentration bands</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrapper" style="height: 260px;">
+          <canvas id="stackedBarCanvas" class="chart-canvas"></canvas>
+        </div>
+        <div class="bubble-legend" style="justify-content:flex-start;padding-left:8px;">
+          <span><span class="legend-dot" style="background:#ef4444;"></span>PM2.5</span>
+          <span><span class="legend-dot" style="background:#f59e0b;"></span>PM10</span>
+          <span><span class="legend-dot" style="background:#0ea5e9;"></span>O₃ Ozone</span>
+          <span><span class="legend-dot" style="background:#8b5cf6;"></span>NO₂ Nitrogen</span>
+          <span><span class="legend-dot" style="background:#10b981;"></span>SO₂ &amp; CO</span>
+        </div>
+      </section>
+
+      <!-- Activity Advisories Matrix -->
+      <section class="advisory-grid">
+        <div class="advisory-card">
+          <div class="advisory-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+            </svg>
+          </div>
+          <div class="advisory-texts">
+            <div class="advisory-title">Outdoor Exercise</div>
+            <div class="advisory-desc" id="advOutdoor">Ideal for intense aerobic workouts.</div>
+          </div>
+        </div>
+
+        <div class="advisory-card">
+          <div class="advisory-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+              <rect width="18" height="18" x="3" y="3" rx="2"/>
+              <path d="M3 12h18"/>
+              <path d="M12 3v18"/>
+            </svg>
+          </div>
+          <div class="advisory-texts">
+            <div class="advisory-title">Indoor Ventilation</div>
+            <div class="advisory-desc" id="advVentilation">Safe to open windows for clean airflow.</div>
+          </div>
+        </div>
+
+        <div class="advisory-card">
+          <div class="advisory-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </svg>
+          </div>
+          <div class="advisory-texts">
+            <div class="advisory-title">Sensitive Demographics</div>
+            <div class="advisory-desc" id="advSensitive">No respiratory restrictions detected.</div>
+          </div>
+        </div>
+
+        <div class="advisory-card">
+          <div class="advisory-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+            </svg>
+          </div>
+          <div class="advisory-texts">
+            <div class="advisory-title">Particle Masks</div>
+            <div class="advisory-desc" id="advMask">Respirator mask not required outdoors.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 48-Hour Air Quality Index Trajectory -->
+      <section class="card chart-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            <div>
+              <div class="card-title">48-Hour Air Quality Index Trajectory</div>
+              <div class="card-subtitle">US AQI &amp; European AQI atmospheric evolution</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrapper" style="height: 260px;">
+          <canvas id="aqiTrendCanvas" class="chart-canvas"></canvas>
+        </div>
+      </section>
+    </main>
+
+    <!-- =============================================================
+         VIEW 4: INTERACTIVE WORLD MAP
+         ============================================================= -->
+    <main class="dashboard-view" id="view-map">
+      <div class="map-view-container">
+        <div class="map-header-bar">
+          <div class="map-instruction">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--accent-light);">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" x2="12" y1="8" y2="12"/>
+              <line x1="12" x2="12.01" y1="16" y2="16"/>
+            </svg>
+            <span>Click any location on the map to query real-time atmospheric telemetry and reverse geocode.</span>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-dim);">
+            Active Coordinates: <b id="mapActiveCoordText" class="tabular-nums" style="color:var(--text-main);">51.5074° N, 0.1278° W</b>
+          </div>
+        </div>
+
+        <div class="map-viewport-wrapper">
+          <div id="worldMap"></div>
+
+          <!-- Clean, unobtrusive map data attribution -->
+          <div class="map-attribution">© OpenStreetMap · © OpenMapTiles · OpenFreeMap</div>
+
+          <!-- Floating Telemetry Card on Map -->
+          <div class="map-telemetry-floating" id="mapFloatingCard">
+            <div class="map-floating-header">
+              <div class="map-floating-city" id="mapCardCity">London</div>
+              <div class="map-floating-coords tabular-nums" id="mapCardCoords">51.51°N, 0.13°W</div>
+            </div>
+            <div class="map-floating-temp">
+              <span id="mapCardTemp" class="tabular-nums">--</span>
+              <span style="font-size:16px;color:var(--accent-light);" id="mapCardTempUnit">°C</span>
+              <span style="font-size:12.5px;color:var(--text-muted);margin-left:8px;" id="mapCardCondition">Loading...</span>
+            </div>
+            <div class="map-floating-metrics">
+              <div class="map-metric-pill">
+                <span>Wind</span>
+                <span id="mapCardWind">-- km/h</span>
+              </div>
+              <div class="map-metric-pill">
+                <span>Humidity</span>
+                <span id="mapCardHumidity">--%</span>
+              </div>
+              <div class="map-metric-pill">
+                <span>Pressure</span>
+                <span id="mapCardPressure">-- hPa</span>
+              </div>
+              <div class="map-metric-pill">
+                <span>Air Quality</span>
+                <span id="mapCardAqi" style="color:var(--accent-light);">--</span>
+              </div>
+            </div>
+            <button class="map-select-btn" id="mapSetLocationBtn">Focus Location in Analytics</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- =============================================================
+         VIEW 5: 14-DAY FORECAST & TRENDS
+         ============================================================= -->
+    <main class="dashboard-view" id="view-forecast">
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+            <div>
+              <div class="card-title">14-Day Extended Synoptic Matrix</div>
+              <div class="card-subtitle">Comprehensive long-range atmospheric forecast model</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="forecast-table-wrapper">
+          <table class="forecast-table">
+            <thead>
+              <tr>
+                <th>Day & Date</th>
+                <th>Conditions</th>
+                <th>Diurnal Thermal Range</th>
+                <th>Precipitation</th>
+                <th>Peak Wind & Gusts</th>
+                <th>Max UV</th>
+                <th>Sun Schedule</th>
+              </tr>
+            </thead>
+            <tbody id="forecastTableBody">
+              <!-- Dynamically populated 14 rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- =============================================================
+         VIEW 6: CITY COMPARISONS
+         ============================================================= -->
+    <main class="dashboard-view" id="view-comparisons">
+      <!-- Global Temperature Benchmark Bars -->
+      <section class="card chart-card" data-prism-index="5">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" x2="12" y1="3" y2="21"/>
+              <polyline points="8 7 4 11 8 15"/>
+              <polyline points="16 7 20 11 16 15"/>
+            </svg>
+            <div>
+              <div class="card-title">Global Thermal Benchmark</div>
+              <div class="card-subtitle">Live temperature comparison across international meteorological stations</div>
+            </div>
+          </div>
+          <span class="card-badge emerald" id="compareLiveBadge">Live</span>
+        </div>
+        <div class="chart-wrapper" style="height: 360px;">
+          <canvas id="compareTempCanvas" class="chart-canvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Bubble Scatter Chart: Temp vs Humidity, sized by wind -->
+      <section class="card chart-card" data-prism-index="4">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="7.5" cy="7.5" r="5.5" fill="currentColor" opacity="0.3"/>
+              <circle cx="17.5" cy="16.5" r="3.5" fill="currentColor" opacity="0.5"/>
+              <circle cx="18" cy="6" r="2.5" fill="currentColor" opacity="0.7"/>
+            </svg>
+            <div>
+              <div class="card-title">Temperature vs. Humidity Scatter</div>
+              <div class="card-subtitle">Global stations · bubble size = wind speed</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrapper" style="height: 360px;">
+          <canvas id="bubbleChartCanvas" class="chart-canvas"></canvas>
+        </div>
+        <div class="bubble-legend">
+          <span>Axis X: Temperature</span>
+          <span>Axis Y: Humidity</span>
+          <span>Bubble Size: Wind Speed</span>
+        </div>
+      </section>
+
+      <!-- City Detail Comparison Cards -->
+      <section class="compare-cards-grid" id="compareCardsGrid">
+        <!-- Dynamically populated comparison cards -->
+      </section>
+    </main>
+
+    <!-- =============================================================
+         VIEW 7: SETTINGS & APPEARANCE
+         ============================================================= -->
+    <main class="dashboard-view" id="view-settings">
+      <div class="settings-grid">
+        <!-- Appearance Card -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+              </svg>
+              <div>
+                <div class="card-title">Appearance</div>
+                <div class="card-subtitle">Theme, accent color, and layout density</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-section-title">Theme Mode</label>
+            <div class="theme-toggle-group">
+              <button class="theme-toggle-btn active" data-theme="dark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                Dark
+              </button>
+              <button class="theme-toggle-btn" data-theme="light">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                  <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+                </svg>
+                Light
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-section-title">Accent Color</label>
+            <div class="accent-grid" id="accentGrid">
+              <button class="accent-swatch active" data-accent="emerald">
+                <span class="swatch-dot" style="background:#10b981;"></span>
+                <span class="swatch-label">Emerald</span>
+              </button>
+              <button class="accent-swatch" data-accent="blue">
+                <span class="swatch-dot" style="background:#0ea5e9;"></span>
+                <span class="swatch-label">Blue</span>
+              </button>
+              <button class="accent-swatch" data-accent="violet">
+                <span class="swatch-dot" style="background:#8b5cf6;"></span>
+                <span class="swatch-label">Violet</span>
+              </button>
+              <button class="accent-swatch" data-accent="amber">
+                <span class="swatch-dot" style="background:#f59e0b;"></span>
+                <span class="swatch-label">Amber</span>
+              </button>
+              <button class="accent-swatch" data-accent="rose">
+                <span class="swatch-dot" style="background:#f43f5e;"></span>
+                <span class="swatch-label">Rose</span>
+              </button>
+              <button class="accent-swatch prismatic" data-accent="prismatic">
+                <span class="swatch-dot"></span>
+                <span class="swatch-label">Prismatic</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-section-title">Layout Density</label>
+            <div class="density-toggle-group">
+              <button class="density-btn" data-density="compact">Compact</button>
+              <button class="density-btn active" data-density="comfortable">Comfortable</button>
+              <button class="density-btn" data-density="spacious">Spacious</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Preferences Card -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              <div>
+                <div class="card-title">Preferences</div>
+                <div class="card-subtitle">Units, data & telemetry sync</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-section-title">Temperature & Wind Units</label>
+            <div class="settings-info-row">
+              <span>Current Units</span>
+              <span class="settings-info-val" id="settingsUnitsVal">Metric (°C, km/h, mm)</span>
+            </div>
+            <button class="action-btn" id="settingsToggleUnits" style="width:100%;justify-content:center;">
+              <span>Switch to Imperial (°F, mph, in)</span>
+            </button>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-section-title">Data Storage</label>
+            <div class="settings-info-row">
+              <span>Recent Stations</span>
+              <span class="settings-info-val" id="settingsRecentCount">0</span>
+            </div>
+            <div class="settings-info-row">
+              <span>Last Sync</span>
+              <span class="settings-info-val" id="settingsLastSync">--</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="action-btn" id="settingsClearRecent" style="flex:1;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                  <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Clear Recently Viewed
+              </button>
+              <button class="action-btn" id="settingsResetAppearance" style="flex:1;justify-content:center;">Reset Appearance</button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-section-title">About</label>
+            <div class="settings-info-row">
+              <span>Platform</span>
+              <span class="settings-info-val">Aether Analytics v2.4</span>
+            </div>
+            <div class="settings-info-row">
+              <span>Data Sources</span>
+              <span class="settings-info-val">Open-Meteo, Copernicus CAMS, OpenStreetMap</span>
+            </div>
+            <div class="settings-info-row">
+              <span>Map Tiles</span>
+              <span class="settings-info-val">OpenFreeMap (vector, watermark-free)</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+      <div class="footer-left">
+        <span>Aether Atmospheric Platform v2.4</span>
+        <span>•</span>
+        <span>Telemetry Sources: <b class="footer-badge">Open-Meteo</b>, <b class="footer-badge">Copernicus CAMS</b>, <b class="footer-badge">WMO</b></span>
+        <span>•</span>
+        <span id="storageSyncBadge">data.json Client Sync: Active</span>
+      </div>
+      <div>
+        Last Telemetry Refresh: <span id="footerLastSync" class="tabular-nums">--:--:--</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="bottom-nav" id="bottomNav" aria-label="Primary navigation">
+    <button class="bottom-tab active" data-view="overview" aria-label="Overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
+      </svg>
+      <span>Home</span>
+    </button>
+    <button class="bottom-tab" data-view="analytics" aria-label="Climate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>
+      </svg>
+      <span>Climate</span>
+    </button>
+    <button class="bottom-tab" data-view="airquality" aria-label="Air Quality">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.5 7.5"/>
+      </svg>
+      <span>Air</span>
+    </button>
+    <button class="bottom-tab" data-view="map" aria-label="Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+        <line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/>
+      </svg>
+      <span>Map</span>
+    </button>
+    <button class="bottom-tab" data-view="forecast" aria-label="Trends">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span>Trends</span>
+    </button>
+    <button class="bottom-tab" data-view="comparisons" aria-label="Compare">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="3" x2="12" y2="21"/><polyline points="8 7 4 11 8 15"/><polyline points="16 7 20 11 16 15"/>
+      </svg>
+      <span>Compare</span>
+    </button>
+    <button class="bottom-tab" data-view="settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- MapLibre GL Map JS -->
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <!-- Client Application Script -->
+  <script src="client.js"></script>
+</body>
+</html>

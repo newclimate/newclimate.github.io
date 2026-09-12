@@ -1,0 +1,89 @@
+{
+  "lastSelectedLocation": {
+    "name": "Whitianga",
+    "country": "New Zealand",
+    "latitude": -36.841790322582,
+    "longitude": 175.8061020104036,
+    "timezone": "Pacific/Auckland"
+  },
+  "recentlyViewedLocations": [
+    {
+      "name": "Whitianga",
+      "country": "New Zealand",
+      "latitude": -36.841790322582,
+      "longitude": 175.8061020104036,
+      "timezone": "Pacific/Auckland"
+    },
+    {
+      "name": "Waihi",
+      "country": "New Zealand",
+      "latitude": -37.38333,
+      "longitude": 175.83333,
+      "timezone": "Pacific/Auckland"
+    },
+    {
+      "name": "La Prenessaye",
+      "country": "France",
+      "latitude": 48.21211390535336,
+      "longitude": -2.6522360313599904,
+      "timezone": "Europe/Paris"
+    },
+    {
+      "name": "Nagano",
+      "country": "Japan",
+      "latitude": 36.61773216000592,
+      "longitude": 138.12011718750003,
+      "timezone": "Asia/Tokyo"
+    },
+    {
+      "name": "Radekhiv urban hromada",
+      "country": "Ukraine",
+      "latitude": 50.233151832472245,
+      "longitude": 24.433593750000004,
+      "timezone": "Europe/Kyiv"
+    },
+    {
+      "name": "Ohrenbach",
+      "country": "Germany",
+      "latitude": 49.453842594330744,
+      "longitude": 10.195312500000002,
+      "timezone": "Europe/Berlin"
+    },
+    {
+      "name": "London",
+      "country": "United Kingdom",
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "timezone": "Europe/London"
+    },
+    {
+      "name": "New York",
+      "country": "United States",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "timezone": "America/New_York"
+    },
+    {
+      "name": "Tokyo",
+      "country": "Japan",
+      "latitude": 35.6762,
+      "longitude": 139.6503,
+      "timezone": "Asia/Tokyo"
+    },
+    {
+      "name": "Sydney",
+      "country": "Australia",
+      "latitude": -33.8688,
+      "longitude": 151.2093,
+      "timezone": "Australia/Sydney"
+    }
+  ],
+  "preferences": {
+    "unit": "metric",
+    "autoRefresh": true,
+    "refreshIntervalSec": 300,
+    "activeView": "overview"
+  },
+  "cachedResponses": {},
+  "lastUpdated": "2026-09-12T16:47:56.478Z"
+}
