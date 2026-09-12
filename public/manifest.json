@@ -1,0 +1,53 @@
+{
+  "name": "New Climate — Weather & Climate Analytics",
+  "short_name": "New Climate",
+  "description": "Real-time weather, climate and air quality analytics for locations around the world.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
+  "categories": ["weather", "utilities", "lifestyle"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Overview",
+      "short_name": "Overview",
+      "description": "Jump straight to the weather overview",
+      "url": "./index.html#overview",
+      "icons": [
+        { "src": "icons/icon-192.png", "sizes": "192x192" }
+      ]
+    },
+    {
+      "name": "Interactive Map",
+      "short_name": "Map",
+      "description": "Explore the interactive world map",
+      "url": "./index.html#map",
+      "icons": [
+        { "src": "icons/icon-192.png", "sizes": "192x192" }
+      ]
+    }
+  ]
+}

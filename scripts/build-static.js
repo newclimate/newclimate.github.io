@@ -58,7 +58,19 @@ function main() {
     copy(path.join(root, 'client.js'), path.join(outDir, 'client.js'));
     copy(path.join(root, 'style.css'), path.join(outDir, 'style.css'));
     copy(path.join(root, 'data.json'), path.join(outDir, 'data.json'));
-    console.log('✓ Copied standalone dashboard into ./out (root now serves the app).');
+
+    // PWA assets: manifest, service worker and app icons.
+    copy(path.join(root, 'public', 'manifest.json'), path.join(outDir, 'manifest.json'));
+    copy(path.join(root, 'public', 'sw.js'), path.join(outDir, 'sw.js'));
+    const iconsDir = path.join(root, 'public', 'icons');
+    const outIconsDir = path.join(outDir, 'icons');
+    if (fs.existsSync(iconsDir)) {
+      fs.mkdirSync(outIconsDir, { recursive: true });
+      for (const f of fs.readdirSync(iconsDir)) {
+        copy(path.join(iconsDir, f), path.join(outIconsDir, f));
+      }
+    }
+    console.log('✓ Copied standalone dashboard + PWA assets into ./out (root now serves the app).');
   } finally {
     // 4. Restore the API routes.
     if (moved && fs.existsSync(apiBackup)) {

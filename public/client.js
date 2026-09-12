@@ -1,5 +1,5 @@
 /**
- * AETHER — Weather & Climate Analytics Platform
+ * NEW CLIMATE — Weather & Climate Analytics Platform
  * Production Client Application
  */
 
@@ -1432,6 +1432,26 @@
     renderComparisonCards(data);
   }
 
+  // Human-friendly relative timestamp ("just now", "2 min ago", ...)
+  function timeAgo(date) {
+    const s = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (s < 5) return 'just now';
+    if (s < 60) return `${s} sec ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m} min ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} hr ago`;
+    return `${Math.floor(h / 24)} day${Math.floor(h / 24) === 1 ? '' : 's'} ago`;
+  }
+
+  function updateSyncTimestamps() {
+    const now = new Date();
+    const footerEl = document.getElementById('footerLastSync');
+    if (footerEl) footerEl.textContent = timeAgo(now);
+    const lastSyncEl = document.getElementById('settingsLastSync');
+    if (lastSyncEl) lastSyncEl.textContent = `${timeAgo(now)} · ${now.toLocaleTimeString()}`;
+  }
+
   // Refresh the "About & Preferences" readouts on the Settings tab
   function refreshSettingsMeta() {
     const unitsVal = document.getElementById('settingsUnitsVal');
@@ -1440,8 +1460,7 @@
     }
     const recentCount = document.getElementById('settingsRecentCount');
     if (recentCount) recentCount.textContent = `${State.recentlyViewed.length} station${State.recentlyViewed.length === 1 ? '' : 's'}`;
-    const lastSync = document.getElementById('settingsLastSync');
-    if (lastSync) lastSync.textContent = new Date().toLocaleTimeString();
+    updateSyncTimestamps();
   }
 
   function renderComparisonBars(data) {
@@ -2576,7 +2595,7 @@
       renderStackedBarChart(airQuality);
       updateMapPosition(State.location.latitude, State.location.longitude);
 
-      document.getElementById('footerLastSync').textContent = new Date().toLocaleTimeString();
+      updateSyncTimestamps();
       refreshSettingsMeta();
 
       // Record into recently viewed
@@ -2847,6 +2866,36 @@
 
     // Auto-refresh every 5 minutes
     setInterval(loadTelemetry, 5 * 60 * 1000);
+
+    // Keep the relative "last updated" label fresh without extra network calls
+    setInterval(() => {
+      if (State.weatherData) updateSyncTimestamps();
+    }, 30 * 1000);
+
+    // Register the service worker (installable app + offline shell on Android
+    // and desktop Chrome). iOS uses the apple-touch-icon / web-app meta tags.
+    if ('serviceWorker' in navigator) {
+      try {
+        const swUrl = new URL('sw.js', location.href);
+        if (swUrl.origin === location.origin) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register(swUrl.pathname).catch(() => {
+              /* SW is an enhancement; ignore registration failures */
+            });
+          });
+        }
+      } catch (_) { /* no-op */ }
+    }
+
+    // Respond to hash-based deep links (e.g. /#map from a manifest shortcut).
+    const initialHash = (location.hash || '').replace('#', '');
+    if (initialHash && document.getElementById(`view-${initialHash}`)) {
+      switchView(initialHash);
+    }
+    window.addEventListener('hashchange', () => {
+      const h = (location.hash || '').replace('#', '');
+      if (h && document.getElementById(`view-${h}`)) switchView(h);
+    });
   }
 
   // Start app when DOM is ready

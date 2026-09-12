@@ -2283,7 +2283,12 @@ html {
 
   /* Charts: consistent, readable heights on small screens */
   .chart-wrapper {
-    height: 200px !important;
+    height: 220px !important;
+  }
+  /* Scatter/bubble and comparison charts need a little more room */
+  .chart-wrapper:has(#bubbleChartCanvas),
+  .chart-wrapper:has(#compareTempCanvas) {
+    height: 300px !important;
   }
 
   /* 7-day forecast becomes a snap-scrolling carousel */
@@ -2306,9 +2311,12 @@ html {
     scroll-snap-align: start;
   }
 
-  /* Map fills the viewport, telemetry card becomes a bottom sheet */
+  /* Map fills the viewport, telemetry card becomes a bottom sheet.
+     Use dynamic viewport height (100dvh) so iOS browser chrome doesn't cause
+     layout jumps; 100vh is the fallback for older browsers. */
   .map-viewport-wrapper {
     height: calc(100vh - 220px);
+    height: calc(100dvh - 220px);
     min-height: 420px;
     border-radius: var(--radius-lg);
   }
@@ -2369,5 +2377,30 @@ html {
   .toast {
     width: 100%;
     max-width: 420px;
+  }
+}
+
+/* Remove iOS tap flash + double-tap zoom delay for an app-like feel */
+@media (max-width: 900px) {
+  body, a, button, [role="button"], .city-chip, .view-tab, .bottom-tab,
+  .unit-btn, .action-btn, .accent-swatch, .density-btn, .theme-toggle-btn {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a, button, .city-chip, .bottom-tab, .view-tab {
+    touch-action: manipulation;
+  }
+  /* Simplify the dense footer on phones to reduce clutter */
+  .dashboard-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+  .footer-left {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .footer-left span:nth-child(2n) {
+    display: none; /* hide inter-dot separators on mobile */
   }
 }

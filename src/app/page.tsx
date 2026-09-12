@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Aether — Redirecting",
+  title: "New Climate — Redirecting",
 };
 
 export default function HomePage() {
@@ -16,7 +16,7 @@ export default function HomePage() {
         <meta httpEquiv="refresh" content="0; url=./index.html" />
       </head>
       <body>
-        <p>Redirecting to the Aether dashboard…</p>
+        <p>Redirecting to the New Climate dashboard…</p>
       </body>
     </html>
   );
